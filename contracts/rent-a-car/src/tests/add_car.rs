@@ -1,4 +1,4 @@
-use soroban_sdk::{testutils::Address as _, Address, vec, IntoVal, Symbol};
+use soroban_sdk::{testutils::{Address as _, MockAuth, MockAuthInvoke}, Address, vec, IntoVal, Symbol};
 use crate::{storage::{car::read_car, types::car_status::CarStatus}, tests::config::{contract::ContractTest, utils::get_contract_events}};
 
 #[test]
@@ -68,5 +68,27 @@ pub fn test_add_car_already_exists_fails() {
     env.mock_all_auths();
 
     contract.add_car(&owner, &price_per_day);
+    contract.add_car(&owner, &price_per_day);
+}
+
+#[test]
+#[should_panic(expected = "Error(Auth, InvalidAction)")]
+pub fn test_unauthorized_user_cannot_add_car() {
+    let ContractTest { env, contract, .. } = ContractTest::setup();
+
+    let fake_admin = Address::generate(&env);
+    let owner = Address::generate(&env);
+    let price_per_day = 1500_i128;
+
+    env.mock_auths(&[MockAuth {
+        address: &fake_admin,
+        invoke: &MockAuthInvoke {
+            contract: &contract.address,
+            fn_name: "add_car",
+            args: (owner.clone(), price_per_day).into_val(&env),
+            sub_invokes: &[],
+        },
+    }]);
+
     contract.add_car(&owner, &price_per_day);
 }
