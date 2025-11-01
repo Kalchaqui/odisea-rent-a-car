@@ -8,7 +8,10 @@ pub fn test_get_car_status_returns_available() {
     let owner = Address::generate(&env);
     let price_per_day = 1500_i128;
 
+    env.mock_all_auths();
+
     contract.add_car(&owner, &price_per_day);
+
     let is_car_stored = env.as_contract(&contract.address, || {
         has_car(&env, &owner)
     });
