@@ -16,8 +16,7 @@ interface CarsListProps {
 export const CarsList = ({ cars }: CarsListProps) => {
   const { walletAddress, selectedRole, setHashId, setCars } =
     useStellarAccounts();
-  const [adminFeesBalance, setAdminFeesBalance] = useState<number>(0);
-  const [loadingFee, setLoadingFee] = useState(false);
+  // Admin fees balance is now managed in AdminFeeManager component
 
   // Load admin fee and balance for admin users
   useEffect(() => {

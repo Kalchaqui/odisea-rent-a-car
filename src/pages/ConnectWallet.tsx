@@ -1,4 +1,4 @@
-import { Button, Icon, Text } from "@stellar/design-system";
+import { Icon, Text } from "@stellar/design-system";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useStellarAccounts } from "../providers/StellarAccountProvider.tsx";
