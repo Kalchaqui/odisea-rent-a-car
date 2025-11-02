@@ -9,8 +9,9 @@ pub fn test_get_car_status_returns_available() {
     let price_per_day = 1500_i128;
 
     env.mock_all_auths();
+    let commission_amount = 1_000_000_000_i128; // 1 XLM in stroops
 
-    contract.add_car(&owner, &price_per_day);
+    contract.add_car(&owner, &price_per_day, &commission_amount);
 
     let is_car_stored = env.as_contract(&contract.address, || {
         has_car(&env, &owner)

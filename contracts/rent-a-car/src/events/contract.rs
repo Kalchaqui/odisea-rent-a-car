@@ -8,3 +8,12 @@ pub(crate) fn contract_initialized(env: &Env, admin: Address, token: Address) {
         (admin, token)
     );
 }
+
+pub(crate) fn admin_fee_set(env: &Env, fee: i128) {
+    let topics = (Symbol::new(env, "admin_fee_set"),);
+
+    env.events().publish(
+        topics,
+        fee
+    );
+}

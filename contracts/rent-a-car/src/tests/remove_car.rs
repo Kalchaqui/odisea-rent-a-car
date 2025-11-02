@@ -9,8 +9,9 @@ pub fn test_remove_car_deletes_from_storage() {
 
     let owner = Address::generate(&env);
     let price_per_day = 1500_i128;
+    let commission_amount = 1_000_000_000_i128; // 1 XLM in stroops
 
-    contract.add_car(&owner, &price_per_day);
+    contract.add_car(&owner, &price_per_day, &commission_amount);
     assert!(env.as_contract(&contract.address, || {
         has_car(&env, &owner)
     }));

@@ -1,6 +1,10 @@
 use soroban_sdk::{testutils::Address as _, Address, vec, IntoVal, Symbol};
 use crate::{
-    storage::{car::read_car, contract_balance::read_contract_balance},
+    storage::{
+        car::{read_car, write_car},
+        contract_balance::read_contract_balance,
+        types::car_status::CarStatus,
+    },
     tests::config::{contract::ContractTest, utils::get_contract_events},
 };
 
@@ -20,11 +24,22 @@ pub fn test_payout_owner_successfully() {
     let amount_mint = 10_000_i128;
     token_admin.mint(&renter, &amount_mint);
 
-    contract.add_car(&owner, &price_per_day);
+    let commission_amount = 1_000_000_000_i128; // 1 XLM in stroops
+    contract.add_car(&owner, &price_per_day, &commission_amount);
     contract.rental(&renter, &owner, &total_days, &amount);
 
+    // Use fixed commission amount
+    let admin_fee = commission_amount;
+    let total_balance = amount + admin_fee;
     let contract_balance = env.as_contract(&contract.address, || read_contract_balance(&env));
-    assert_eq!(contract_balance, amount);
+    assert_eq!(contract_balance, total_balance);
+
+    // Return the car (change status to Available) so owner can withdraw
+    env.as_contract(&contract.address, || {
+        let mut car = read_car(&env, &owner);
+        car.car_status = CarStatus::Available;
+        write_car(&env, &owner, &car);
+    });
 
     contract.payout_owner(&owner, &amount);
     let contract_events = get_contract_events(&env, &contract.address);
@@ -32,8 +47,10 @@ pub fn test_payout_owner_successfully() {
     let car = env.as_contract(&contract.address, || read_car(&env, &owner));
     assert_eq!(car.available_to_withdraw, 0);
 
+    // After payout, balance should only have the admin fee
+    let admin_fee = commission_amount;
     let contract_balance = env.as_contract(&contract.address, || read_contract_balance(&env));
-    assert_eq!(contract_balance, 0);
+    assert_eq!(contract_balance, admin_fee);
     
     assert_eq!(
         contract_events,
@@ -69,8 +86,16 @@ pub fn test_payout_owner_insufficient_balance_fails() {
     let amount_mint = 10_000_i128;
     token_admin.mint(&renter, &amount_mint);
 
-    contract.add_car(&owner, &price_per_day);
+    let commission_amount = 1_000_000_000_i128; // 1 XLM in stroops
+    contract.add_car(&owner, &price_per_day, &commission_amount);
     contract.rental(&renter, &owner, &total_days, &rental_amount);
+
+    // Return the car (change status to Available) so we can test withdrawal
+    env.as_contract(&contract.address, || {
+        let mut car = read_car(&env, &owner);
+        car.car_status = CarStatus::Available;
+        write_car(&env, &owner, &car);
+    });
 
     // Intentar retirar más de lo disponible
     let withdraw_amount = 5000_i128; // Mayor que rental_amount (4500)

@@ -5,7 +5,7 @@ function StellarExpertLink({ url }: { url: string }) {
           href={`https://stellar.expert/explorer/testnet/tx/${url}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-blue-600 underline"
+          className="text-blue-400 hover:text-purple-400 underline transition-colors neon-text-blue"
         >
           View on explorer
         </a>

@@ -16,4 +16,8 @@ pub enum Error {
     RentalNotFound = 7,
     InsufficientBalance = 8,
     BalanceNotAvailableForAmountRequested = 9,
+    Overflow = 13,
+    Underflow = 14,
+    CarNotReturned = 15,
+    InvalidCommissionAmount = 16, // Commission amount must be positive
 }

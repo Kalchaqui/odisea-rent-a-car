@@ -26,7 +26,8 @@ pub fn test_rental_car_successfully() {
     let amount_mint = 10_000_i128;
     token_admin.mint(&renter, &amount_mint);
 
-    contract.add_car(&owner, &price_per_day);
+    let commission_amount = 1_000_000_000_i128; // 1 XLM in stroops
+    contract.add_car(&owner, &price_per_day, &commission_amount);
 
     let initial_contract_balance = env.as_contract(&contract.address, || read_contract_balance(&env));
     assert_eq!(initial_contract_balance, 0);
@@ -34,8 +35,11 @@ pub fn test_rental_car_successfully() {
     contract.rental(&renter, &owner, &total_days, &amount);
     let contract_events = get_contract_events(&env, &contract.address);
 
+    // Contract balance includes deposit + admin fee (fixed commission amount)
+    let admin_fee = commission_amount;
+    let total_balance = amount + admin_fee;
     let updated_contract_balance = env.as_contract(&contract.address, || read_contract_balance(&env));
-    assert_eq!(updated_contract_balance, amount);
+    assert_eq!(updated_contract_balance, total_balance);
 
     let car = env.as_contract(&contract.address, || read_car(&env, &owner));
     assert_eq!(car.car_status, CarStatus::Rented);
@@ -45,6 +49,8 @@ pub fn test_rental_car_successfully() {
     assert_eq!(rental.total_days_to_rent, total_days);
     assert_eq!(rental.amount, amount);
     
+    // Event includes total amount (deposit + fee)
+    let total_amount = amount + admin_fee;
     assert_eq!(
         contract_events,
         vec![
@@ -57,7 +63,7 @@ pub fn test_rental_car_successfully() {
                     renter.clone().into_val(&env),
                     owner.clone().into_val(&env),
                 ],
-                (total_days, amount).into_val(&env)
+                (total_days, total_amount).into_val(&env)
             )
         ]
     );
@@ -82,7 +88,8 @@ pub fn test_rental_car_already_rented_fails() {
     token_admin.mint(&renter1, &amount_mint);
     token_admin.mint(&renter2, &amount_mint);
 
-    contract.add_car(&owner, &price_per_day);
+    let commission_percentage = 10_u32;
+    contract.add_car(&owner, &price_per_day, &commission_percentage);
 
     // Primer renter alquila el carro exitosamente
     contract.rental(&renter1, &owner, &total_days, &amount);

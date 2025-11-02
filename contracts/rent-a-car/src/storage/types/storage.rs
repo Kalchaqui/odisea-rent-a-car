@@ -8,4 +8,6 @@ pub enum DataKey {
     ContractBalance,
     Car(Address),
     Rental(Address, Address),
+    AdminFee,
+    AdminFeesBalance,
 }

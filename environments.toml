@@ -76,6 +76,7 @@ name = "testnet-user"
 default = true
 
 [staging.contracts]
+rent_a_cart = { id = "CAMIHIV3UABUKHUDDWT5G3OTFQS4HVZD2SPRVORKGCYL4BH672WDD4U6" }
 # soroban-atomic-swap-contract = { id = "C123..." }
 # soroban-auth-contract = { id = "C234..." }
 # soroban-errors-contract = { id = "C345..." }

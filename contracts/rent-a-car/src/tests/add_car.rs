@@ -9,7 +9,8 @@ pub fn test_add_car_successfully() {
     let price_per_day = 1500_i128;
 
     env.mock_all_auths();
-    contract.add_car(&owner, &price_per_day);
+    let commission_amount = 1_000_000_000_i128; // 1 XLM in stroops
+    contract.add_car(&owner, &price_per_day, &commission_amount);
     let contract_events = get_contract_events(&env, &contract.address);
 
     let stored_car = env.as_contract(&contract.address, || {
@@ -43,8 +44,9 @@ pub fn test_add_car_with_zero_price_fails() {
     let price_per_day = 0_i128;
     
     env.mock_all_auths();
+    let commission_percentage = 10_u32;
 
-    contract.add_car(&owner, &price_per_day);
+    contract.add_car(&owner, &price_per_day, &commission_percentage);
 }
 #[test]
 #[should_panic(expected = "Error(Contract, #6)")]
@@ -54,8 +56,9 @@ pub fn test_add_car_with_negative_price_fails() {
     let price_per_day = -100_i128;
     
     env.mock_all_auths();
+    let commission_percentage = 10_u32;
 
-    contract.add_car(&owner, &price_per_day);
+    contract.add_car(&owner, &price_per_day, &commission_percentage);
 }
 
 #[test]
@@ -66,9 +69,10 @@ pub fn test_add_car_already_exists_fails() {
     let price_per_day = 1500_i128;
     
     env.mock_all_auths();
+    let commission_amount = 1_000_000_000_i128;
 
-    contract.add_car(&owner, &price_per_day);
-    contract.add_car(&owner, &price_per_day);
+    contract.add_car(&owner, &price_per_day, &commission_amount);
+    contract.add_car(&owner, &price_per_day, &commission_amount);
 }
 
 #[test]
@@ -85,10 +89,11 @@ pub fn test_unauthorized_user_cannot_add_car() {
         invoke: &MockAuthInvoke {
             contract: &contract.address,
             fn_name: "add_car",
-            args: (owner.clone(), price_per_day).into_val(&env),
+            args: (owner.clone(), price_per_day, 1_000_000_000_i128).into_val(&env),
             sub_invokes: &[],
         },
     }]);
 
-    contract.add_car(&owner, &price_per_day);
+    let commission_amount = 1_000_000_000_i128;
+    contract.add_car(&owner, &price_per_day, &commission_amount);
 }

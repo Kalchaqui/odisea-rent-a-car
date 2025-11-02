@@ -1,0 +1,22 @@
+# Scout Soroban Configuration
+# https://coinfabrik.github.io/scout-soroban/
+
+# Manifest path for the project
+manifest-path = "Cargo.toml"
+
+# Output format (can be: Text, Json, Html, Markdown, Sarif)
+output-format = "Text"
+
+# Verbosity level (0 = errors only, 1 = warnings, 2 = info, 3 = debug)
+verbose = 2
+
+# Filter detectors to run (leave empty to run all)
+# Available detectors: https://coinfabrik.github.io/scout-soroban/detectors/
+# detectors = []
+
+# Filter detectors to exclude
+# exclude-detectors = []
+
+# Path to output the results
+# output-path = "scout-audit-report.txt"
+
