@@ -1,6 +1,6 @@
 <div align="center">
 
-![Futuristic Car](./public/futuristic-car.png)
+![autosuper](https://github.com/user-attachments/assets/f70d0434-0246-484f-aa48-c3622ae0a361)
 
 # 🚗 Stellar Car Rental - dApp de Alquiler de Autos
 
@@ -24,7 +24,7 @@
 
 ## 📋 Descripción
 
-**Stellar Car Rental** es una dApp descentralizada que permite a los usuarios alquilar vehículos de forma segura y transparente utilizando la blockchain de Stellar. La aplicación implementa un sistema completo de gestión de alquileres con roles diferenciados (Administrador, Propietario y Arrendatario), comisiones automáticas y contratos inteligentes ejecutados en Soroban.
+**Stellar Car Rental** es una dApp descentralizada creada en el bootcamo de 0 a dApp con Stellar + Rust que permitió a los usuarios alquilar vehículos utilizando la blockchain testnet de Stellar. La aplicación implementa un sistema completo de gestión de alquileres con roles diferenciados (Administrador, Propietario y Arrendatario), comisiones automáticas y contratos inteligentes ejecutados en Soroban.
 
 ### ✨ Características Principales
 
@@ -73,40 +73,6 @@
 
 - **Stellar Testnet** - Red de pruebas
 - **Soroban RPC** - Comunicación con la blockchain
-
----
-
-## 📁 Estructura del Proyecto
-
-```
-my-project/
-├── contracts/
-│   └── rent-a-car/          # Contrato inteligente en Rust
-│       ├── src/
-│       │   ├── contract.rs   # Lógica principal del contrato
-│       │   ├── storage/      # Módulos de almacenamiento
-│       │   ├── methods/      # Métodos públicos del contrato
-│       │   ├── events/       # Definición de eventos
-│       │   └── tests/        # Suite de tests unitarios
-│       └── Cargo.toml
-│
-├── src/                      # Frontend React
-│   ├── components/           # Componentes reutilizables
-│   │   ├── CarList.tsx      # Lista de vehículos
-│   │   ├── CreateCarForm.tsx # Formulario de creación
-│   │   └── AdminFeeManager.tsx # Gestión de comisiones
-│   ├── pages/               # Páginas principales
-│   │   ├── ConnectWallet.tsx
-│   │   ├── Dashboard.tsx
-│   │   └── RoleSelection.tsx
-│   ├── services/            # Servicios de backend
-│   │   ├── stellar.service.ts # Servicio Stellar
-│   │   └── wallet.service.ts  # Servicio de wallets
-│   ├── providers/           # Context providers
-│   └── interfaces/          # Definiciones TypeScript
-│
-└── target/                  # Artefactos de compilación
-```
 
 ---
 
@@ -289,44 +255,10 @@ stellar contract deploy --id <CONTRACT_ID> --network testnet -- --admin <ADMIN_A
 
 ---
 
-## 🤝 Contribuir
-
-Las contribuciones son bienvenidas. Por favor:
-
-1. Fork el proyecto
-2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
-3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
-4. Push a la rama (`git push origin feature/AmazingFeature`)
-5. Abre un Pull Request
-
----
-
-## 📄 Licencia
-
-Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más detalles.
-
----
 
 ## 👥 Autor
 
-**Kalcha**
+**Diego Raúl Barrionuevo**
 
 - GitHub: [@Kalchaqui](https://github.com/Kalchaqui)
 
----
-
-## 🙏 Agradecimientos
-
-- [Stellar Development Foundation](https://www.stellar.org/)
-- [Scaffold Stellar](https://github.com/AhaLabs/scaffold-stellar) - Template inicial
-- [Soroban Documentation](https://developers.stellar.org/docs/build/smart-contracts)
-
----
-
-<div align="center">
-
-**⭐ Si te gustó este proyecto, dale una estrella en GitHub ⭐**
-
-Construido con ❤️ usando Stellar y Soroban
-
-</div>
