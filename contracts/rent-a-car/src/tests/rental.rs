@@ -23,10 +23,10 @@ pub fn test_rental_car_successfully() {
 
     let (_, token_admin, _) = token;
 
-    let amount_mint = 10_000_i128;
-    token_admin.mint(&renter, &amount_mint);
-
     let commission_amount = 1_000_000_000_i128; // 1 XLM in stroops
+    // Mint suficiente para cubrir amount + commission_amount
+    let amount_mint = amount + commission_amount + 1_000_000_i128; // Extra para seguridad
+    token_admin.mint(&renter, &amount_mint);
     contract.add_car(&owner, &price_per_day, &commission_amount);
 
     let initial_contract_balance = env.as_contract(&contract.address, || read_contract_balance(&env));
@@ -84,11 +84,11 @@ pub fn test_rental_car_already_rented_fails() {
     
     let (_, token_admin, _) = token;
 
-    let amount_mint: i128 = 10_000_i128;
+    let commission_amount: i128 = 1_000_000_000_i128; // 1 XLM in stroops
+    // Mint suficiente para cubrir amount + commission_amount
+    let amount_mint: i128 = amount + commission_amount + 1_000_000_i128; // Extra para seguridad
     token_admin.mint(&renter1, &amount_mint);
     token_admin.mint(&renter2, &amount_mint);
-
-    let commission_amount: i128 = 1_000_000_000_i128; // 1 XLM in stroops
     contract.add_car(&owner, &price_per_day, &commission_amount);
 
     // Primer renter alquila el carro exitosamente

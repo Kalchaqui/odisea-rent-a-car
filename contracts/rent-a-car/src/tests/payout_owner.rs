@@ -21,10 +21,10 @@ pub fn test_payout_owner_successfully() {
     
     let (_, token_admin, _) = token;
 
-    let amount_mint = 10_000_i128;
-    token_admin.mint(&renter, &amount_mint);
-
     let commission_amount = 1_000_000_000_i128; // 1 XLM in stroops
+    // Mint suficiente para cubrir amount + commission_amount
+    let amount_mint = amount + commission_amount + 1_000_000_i128; // Extra para seguridad
+    token_admin.mint(&renter, &amount_mint);
     contract.add_car(&owner, &price_per_day, &commission_amount);
     contract.rental(&renter, &owner, &total_days, &amount);
 
@@ -83,10 +83,10 @@ pub fn test_payout_owner_insufficient_balance_fails() {
     
     let (_, token_admin, _) = token;
 
-    let amount_mint = 10_000_i128;
-    token_admin.mint(&renter, &amount_mint);
-
     let commission_amount = 1_000_000_000_i128; // 1 XLM in stroops
+    // Mint suficiente para cubrir rental_amount + commission_amount
+    let amount_mint = rental_amount + commission_amount + 1_000_000_i128; // Extra para seguridad
+    token_admin.mint(&renter, &amount_mint);
     contract.add_car(&owner, &price_per_day, &commission_amount);
     contract.rental(&renter, &owner, &total_days, &rental_amount);
 
