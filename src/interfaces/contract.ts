@@ -27,6 +27,7 @@ export interface IRentACarContract extends IBaseContractClient {
 
   get_car_status: ({ owner }: { owner: string }) => Promise<CarStatus>;
   get_car_info: ({ owner }: { owner: string }) => Promise<[number, number]>;
+  has_rental: ({ renter, owner }: { renter: string; owner: string }) => Promise<boolean>;
 
   rental: ({
     renter,
@@ -38,6 +39,14 @@ export interface IRentACarContract extends IBaseContractClient {
     owner: string;
     total_days_to_rent: number;
     amount: number;
+  }) => Promise<this>;
+
+  return_car: ({
+    renter,
+    owner,
+  }: {
+    renter: string;
+    owner: string;
   }) => Promise<this>;
 
   remove_car: ({ owner }: { owner: string }) => Promise<this>;

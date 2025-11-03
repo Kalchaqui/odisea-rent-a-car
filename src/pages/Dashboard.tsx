@@ -49,6 +49,56 @@ export default function Dashboard() {
       const contractClient =
         await stellarService.buildClient<IRentACarContract>(walletAddress);
 
+      // Verify that the connected wallet is the admin of the contract
+      try {
+        const contractAdmin = await contractClient.get_admin();
+        let adminAddress: string;
+        
+        // Handle simulate() if needed
+        if (contractAdmin && typeof contractAdmin === 'object' && 'simulate' in contractAdmin) {
+          const simulation = await (contractAdmin as any).simulate();
+          adminAddress = simulation?.result?.value || simulation?.result || simulation?.value || simulation;
+        } else if (contractAdmin && typeof (contractAdmin as Promise<any>).then === 'function') {
+          adminAddress = await contractAdmin;
+        } else {
+          adminAddress = contractAdmin as string;
+        }
+        
+        console.log("🔍 Contract admin:", adminAddress);
+        console.log("🔍 Connected wallet:", walletAddress);
+        
+        if (adminAddress !== walletAddress) {
+          const errorMsg = 
+            `❌ Error: El wallet conectado NO es el admin del contrato\n\n` +
+            `📝 Admin del contrato: ${adminAddress}\n` +
+            `📝 Wallet conectado: ${walletAddress}\n\n` +
+            `⚠️ SOLUCIÓN:\n` +
+            `1. Desconecta tu wallet actual\n` +
+            `2. Conecta el wallet que es el admin: ${adminAddress}\n` +
+            `3. Vuelve a intentar crear el auto`;
+          
+          console.error("❌ Admin mismatch:", {
+            contractAdmin: adminAddress,
+            connectedWallet: walletAddress
+          });
+          alert(errorMsg);
+          throw new Error("Connected wallet is not the contract admin");
+        }
+        
+        console.log("✅ Connected wallet matches contract admin");
+      } catch (adminCheckError: any) {
+        const adminErrorMsg = adminCheckError instanceof Error ? adminCheckError.message : String(adminCheckError);
+        console.error("❌ Error checking contract admin:", adminErrorMsg);
+        
+        // If it's an auth error, provide helpful message
+        if (adminErrorMsg.includes("not the contract admin") || adminErrorMsg.includes("Admin mismatch")) {
+          throw adminCheckError; // Re-throw to show the alert
+        }
+        
+        // For other errors, continue (might be a parsing issue, but we'll try anyway)
+        console.warn("⚠️ Could not verify admin, proceeding anyway...");
+      }
+
       // Validate commission amount
       if (!commissionAmount || commissionAmount <= 0) {
         alert("El monto de comisión debe ser mayor a 0 XLM");
@@ -56,12 +106,20 @@ export default function Dashboard() {
       }
 
       // ownerAddress can be any valid Stellar address, doesn't need to exist yet
+      console.log("📝 Creating car with params:", {
+        owner: ownerAddress,
+        price_per_day: pricePerDay * ONE_XLM_IN_STROOPS,
+        commission_amount: commissionAmount * ONE_XLM_IN_STROOPS,
+      });
+      
       const addCarResult = await contractClient.add_car({
         owner: ownerAddress,
         price_per_day: pricePerDay * ONE_XLM_IN_STROOPS,
         commission_amount: commissionAmount * ONE_XLM_IN_STROOPS, // Convert XLM to stroops
       });
       const xdr = addCarResult.toXDR();
+      
+      console.log("✅ Transaction XDR generated successfully");
 
       console.log("✍️ Requesting transaction signature...");
       console.log("📝 Admin wallet (MUST match signer):", walletAddress);

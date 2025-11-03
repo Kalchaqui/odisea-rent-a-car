@@ -78,18 +78,18 @@ pub fn test_rental_car_already_rented_fails() {
     let owner = Address::generate(&env);
     let renter1 = Address::generate(&env);
     let renter2 = Address::generate(&env);
-    let price_per_day = 1500_i128;
-    let total_days = 3_u32;
-    let amount = 4500_i128;
+    let price_per_day: i128 = 1500_i128;
+    let total_days: u32 = 3_u32;
+    let amount: i128 = 4500_i128;
     
     let (_, token_admin, _) = token;
 
-    let amount_mint = 10_000_i128;
+    let amount_mint: i128 = 10_000_i128;
     token_admin.mint(&renter1, &amount_mint);
     token_admin.mint(&renter2, &amount_mint);
 
-    let commission_percentage = 10_u32;
-    contract.add_car(&owner, &price_per_day, &commission_percentage);
+    let commission_amount: i128 = 1_000_000_000_i128; // 1 XLM in stroops
+    contract.add_car(&owner, &price_per_day, &commission_amount);
 
     // Primer renter alquila el carro exitosamente
     contract.rental(&renter1, &owner, &total_days, &amount);

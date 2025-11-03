@@ -145,13 +145,106 @@ export class StellarService {
 
   async submitTransaction(xdr: string): Promise<string | undefined> {
     try {
-      const transaction = TransactionBuilder.fromXDR(
-        xdr,
-        this.networkPassphrase
-      );
-      const result = await this.server.submitTransaction(transaction);
-
-      return result.hash;
+      console.log("📤 Submitting transaction XDR length:", xdr.length);
+      
+      // For Soroban contract transactions, submit via RPC
+      // For regular Stellar transactions, submit via Horizon
+      try {
+        console.log("🔷 Attempting to submit via RPC server (Soroban transaction)");
+        
+        // Parse XDR to TransactionEnvelope for RPC
+        const envelope = xdr.TransactionEnvelope.fromXDR(xdr, "base64");
+        console.log("📦 Parsed XDR to TransactionEnvelope");
+        
+        // Send via RPC (this is the correct method for Soroban)
+        // The RPC server expects a TransactionEnvelope
+        const result = await this.rpcServer.sendTransaction(envelope);
+        console.log("✅ Transaction submitted via RPC:", result);
+        
+        // The result from sendTransaction should have a hash property
+        // Result type: { hash: string, status: string, ... }
+        if (result && typeof result === 'object') {
+          const resultAny = result as any;
+          
+          // Check if we have a hash directly
+          if (resultAny.hash) {
+            return resultAny.hash;
+          }
+          
+          // Check status
+          const status = resultAny.status;
+          if (status) {
+            // Check if status indicates success or pending
+            const isSuccess = status === "SUCCESS" || 
+                             status === "PENDING" ||
+                             status === rpc.GetTransactionStatus.SUCCESS ||
+                             status === rpc.GetTransactionStatus.PENDING;
+            
+            if (isSuccess) {
+              // Transaction was accepted, compute hash from the envelope
+              // Use TransactionBuilder to parse and get hash
+              try {
+                const txBuilder = TransactionBuilder.fromXDR(xdr, this.networkPassphrase);
+                return txBuilder.hash().toString("hex");
+              } catch (parseErr) {
+                // If parsing fails, try alternative method
+                console.warn("Could not parse XDR for hash, trying alternative:", parseErr);
+              }
+            } else {
+              // Transaction failed
+              const errorXdr = resultAny.errorResultXdr;
+              if (errorXdr) {
+                throw new Error(`Transaction failed with status: ${status}. Error XDR: ${errorXdr}`);
+              }
+              throw new Error(`Transaction failed with status: ${status}`);
+            }
+          }
+        }
+        
+        // Last resort: compute hash from the XDR using TransactionBuilder
+        try {
+          const txBuilder = TransactionBuilder.fromXDR(xdr, this.networkPassphrase);
+          return txBuilder.hash().toString("hex");
+        } catch (hashErr) {
+          console.error("❌ Could not compute transaction hash:", hashErr);
+          throw new Error("Could not extract transaction hash from result or XDR");
+        }
+      } catch (rpcError: any) {
+        console.warn("⚠️ RPC submission failed, trying Horizon as fallback:", rpcError);
+        
+        // Fallback to Horizon for regular Stellar transactions
+        try {
+          const transaction = TransactionBuilder.fromXDR(
+            xdr,
+            this.networkPassphrase
+          );
+          const result = await this.server.submitTransaction(transaction);
+          console.log("✅ Transaction submitted via Horizon:", result.hash);
+          return result.hash;
+        } catch (horizonError: any) {
+          console.error("❌ Horizon submission also failed:", horizonError);
+          
+          // Provide a helpful error message
+          const rpcErrorMsg = rpcError instanceof Error ? rpcError.message : String(rpcError);
+          const horizonErrorMsg = horizonError instanceof Error ? horizonError.message : String(horizonError);
+          
+          // If RPC error is about malformed transaction, use that
+          if (rpcErrorMsg.includes("malformed") || rpcErrorMsg.includes("tx_malformed")) {
+            throw new Error(
+              `❌ Error: La transacción está mal formada (tx_malformed)\n\n` +
+              `Esto puede deberse a un problema con la firma o la construcción de la transacción.\n\n` +
+              `Por favor intenta:\n` +
+              `1. Recargar la página\n` +
+              `2. Desconectar y reconectar tu wallet\n` +
+              `3. Verificar que tu wallet esté en TESTNET\n` +
+              `4. Intentar crear el auto nuevamente`
+            );
+          }
+          
+          // Otherwise, throw the RPC error as it's more specific for Soroban
+          throw rpcError;
+        }
+      }
     } catch (error: any) {
       console.error("❌ Error submitting transaction:", error);
       
@@ -163,6 +256,20 @@ export class StellarService {
           console.error("❌ Error en la transacción:", resultCodes);
           
           // Handle specific error codes
+          if (resultCodes.transaction === 'tx_malformed') {
+            throw new Error(
+              `❌ Error: La transacción está mal formada (tx_malformed)\n\n` +
+              `Esto puede deberse a:\n` +
+              `1. Problema con la firma de la transacción\n` +
+              `2. La XDR no está correctamente formada\n` +
+              `3. Problema con el SDK de Soroban\n\n` +
+              `Por favor intenta:\n` +
+              `1. Recargar la página\n` +
+              `2. Desconectar y reconectar tu wallet\n` +
+              `3. Intentar crear el auto nuevamente`
+            );
+          }
+          
           if (resultCodes.transaction === 'tx_bad_auth') {
             throw new Error(
               `❌ Error de autenticación (tx_bad_auth)\n\n` +

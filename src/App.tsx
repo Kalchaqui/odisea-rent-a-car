@@ -1,6 +1,6 @@
 import { Button, Layout, Profile } from "@stellar/design-system";
 import { Outlet, Route, Routes, useNavigate } from "react-router-dom";
-import AccountManager from "./components/AccountManager";
+// import AccountManager from "./components/AccountManager"; // Componente de ejemplo - no usado en la dApp principal
 import { shortenAddress } from "./utils/shorten-address.ts";
 import { useStellarAccounts } from "./providers/StellarAccountProvider.tsx";
 import ConnectWallet from "./pages/ConnectWallet.tsx";
@@ -144,13 +144,13 @@ const AppLayout: React.FC = () => {
                           <div className="font-medium text-blue-400">Wallet conectada</div>
                         </div>
                         <button
-                          onClick={() => void handleChangeWallet()}
+                          onClick={handleChangeWallet}
                           className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-purple-500/20 hover:text-purple-400 transition-colors"
                         >
                           Cambiar wallet
                         </button>
                         <button
-                          onClick={() => void handleDisconnect()}
+                          onClick={handleDisconnect}
                           className="block w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-500/20 transition-colors"
                         >
                           Desconectar
@@ -192,7 +192,7 @@ export default function App() {
         <Route path="/" element={<ConnectWallet />} />
         <Route path="/role-selection" element={<RoleSelection />} />
         <Route path="/cars" element={<Dashboard />} />
-        <Route path="/horizon-example" element={<AccountManager />} />
+        {/* <Route path="/horizon-example" element={<AccountManager />} /> */}
       </Route>
     </Routes>
   );

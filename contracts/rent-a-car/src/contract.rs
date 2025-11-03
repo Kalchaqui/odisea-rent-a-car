@@ -6,7 +6,7 @@ use crate::{interfaces::contract::RentACarContractTrait,
         token::write_token,
         types::{car_status::CarStatus, errors::Error},
         structs::{car::Car, rental::Rental},
-        rental::write_rental,
+        rental::{write_rental, has_rental, remove_rental},
         contract_balance::{read_contract_balance, write_contract_balance},
         admin_fee::{read_admin_fee, write_admin_fee},
         admin_fees_balance::{read_admin_fees_balance, write_admin_fees_balance},
@@ -78,6 +78,10 @@ impl RentACarContractTrait for RentACarContract {
         public::get_car_info(env, &owner)
     }
 
+    fn has_rental(env: &Env, renter: Address, owner: Address) -> bool {
+        public::check_has_rental(env, &renter, &owner)
+    }
+
     fn rental(env: &Env, renter: Address, owner: Address, total_days_to_rent: u32, amount: i128) -> Result<(), Error> {
         renter.require_auth();
 
@@ -142,6 +146,36 @@ impl RentACarContractTrait for RentACarContract {
         events::rental::rented(env, renter, owner, total_days_to_rent, total_amount);
         Ok(())
     }
+
+    fn return_car(env: &Env, renter: Address, owner: Address) -> Result<(), Error> {
+        renter.require_auth();
+
+        if !has_car(env, &owner) {
+            return Err(Error::CarNotFound);
+        }
+
+        // Verify that this renter has rented this car
+        if !has_rental(env, &renter, &owner) {
+            return Err(Error::RentalNotFound);
+        }
+
+        let mut car = read_car(env, &owner);
+
+        // Verify the car is currently rented
+        if car.car_status != CarStatus::Rented {
+            return Err(Error::CarAlreadyRented);
+        }
+
+        // Change car status to Available
+        car.car_status = CarStatus::Available;
+
+        write_car(env, &owner, &car);
+        remove_rental(env, &renter, &owner);
+
+        events::return_car::car_returned(env, renter, owner);
+        Ok(())
+    }
+
     fn remove_car(env: &Env, owner: Address) -> Result<(), Error> {
 
         let admin = read_admin(env);

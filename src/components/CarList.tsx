@@ -16,14 +16,6 @@ interface CarsListProps {
 export const CarsList = ({ cars }: CarsListProps) => {
   const { walletAddress, selectedRole, setHashId, setCars } =
     useStellarAccounts();
-  // Admin fees balance is now managed in AdminFeeManager component
-
-  // Load admin fee and balance for admin users
-  useEffect(() => {
-    if (selectedRole === UserRole.ADMIN && walletAddress) {
-      void loadAdminFeeInfo();
-    }
-  }, [selectedRole, walletAddress]);
 
   // Load car info (status and available balance) for owners
   useEffect(() => {
@@ -36,21 +28,6 @@ export const CarsList = ({ cars }: CarsListProps) => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedRole, walletAddress, cars.length]);
-
-  const loadAdminFeeInfo = async () => {
-    if (!walletAddress) return;
-    setLoadingFee(true);
-    try {
-      const contractClient =
-        await stellarService.buildClient<IRentACarContract>(walletAddress);
-      const balance = await contractClient.get_admin_fees_balance();
-      setAdminFeesBalance(balance);
-    } catch (error) {
-      console.error("Error loading admin fees balance:", error);
-    } finally {
-      setLoadingFee(false);
-    }
-  };
 
   const loadCarInfo = async (owner: string) => {
     if (!walletAddress) return;
@@ -78,15 +55,75 @@ export const CarsList = ({ cars }: CarsListProps) => {
       // Handle status - ensure it's a valid CarStatus string
       let statusValue: any;
       if (statusResult && typeof statusResult === 'object' && 'simulate' in statusResult) {
-        const simulation = await (statusResult as any).simulate();
-        console.log("📊 Full status simulation:", JSON.stringify(simulation, null, 2));
-        
-        // Try to extract the status value from different possible structures
-        statusValue = simulation?.result?.value 
-                   || simulation?.result
-                   || simulation?.value?.value
-                   || simulation?.value
-                   || simulation;
+        try {
+          let simulation = await (statusResult as any).simulate();
+          console.log("📊 Full status simulation:", simulation);
+          
+          // If simulation is still an object with simulate(), call it again (shouldn't happen but handle it)
+          let retryCount = 0;
+          while (simulation && typeof simulation === 'object' && 'simulate' in simulation && retryCount < 2) {
+            console.warn(`⚠️ Simulation result still has simulate() method, retrying (${retryCount + 1})...`);
+            simulation = await (simulation as any).simulate();
+            retryCount++;
+          }
+          
+          // The simulation result can be in different formats
+          // Try to extract the actual value from various possible structures
+          if (simulation && typeof simulation === 'object') {
+            // Check for nested result structures - the result is often in simulation.result
+            if ('result' in simulation) {
+              const result = simulation.result;
+              if (result !== null && typeof result === 'object') {
+                // Could be { result: { value: ... } } or { result: { name: ... } }
+                statusValue = result.value ?? result.name ?? result.variant ?? result.tag;
+                // If still object, try to get the first property
+                if (statusValue === undefined && Object.keys(result).length > 0) {
+                  const firstKey = Object.keys(result)[0];
+                  statusValue = (result as any)[firstKey];
+                }
+              } else {
+                // { result: number } or { result: string }
+                statusValue = result;
+              }
+            } else if ('value' in simulation) {
+              statusValue = simulation.value;
+            } else if ('name' in simulation) {
+              statusValue = simulation.name;
+            } else {
+              // Try to find a numeric or string value in the object
+              const keys = Object.keys(simulation);
+              for (const key of keys) {
+                // Skip methods
+                if (key === 'simulate' || key === 'sign' || key === 'signAndSend') continue;
+                const val = (simulation as any)[key];
+                if (typeof val === 'number' || typeof val === 'string') {
+                  statusValue = val;
+                  break;
+                }
+              }
+              // If still not found, try to stringify and parse
+              if (statusValue === undefined) {
+                try {
+                  const str = JSON.stringify(simulation);
+                  // Try to extract number from string representation
+                  const numMatch = str.match(/["']?(\d+)["']?/);
+                  if (numMatch) {
+                    statusValue = parseInt(numMatch[1], 10);
+                  }
+                } catch (e) {
+                  // Ignore JSON stringify errors
+                }
+              }
+            }
+          } else {
+            // Primitive value
+            statusValue = simulation;
+          }
+        } catch (simError) {
+          console.error("❌ Error calling simulate():", simError);
+          // Fallback: try to use statusResult directly
+          statusValue = statusResult;
+        }
       } else if (statusResult && typeof (statusResult as Promise<any>).then === 'function') {
         statusValue = await statusResult;
       } else {
@@ -106,6 +143,7 @@ export const CarsList = ({ cars }: CarsListProps) => {
           2: CarStatus.MAINTENANCE,
         };
         statusStr = statusMap[statusValue] || CarStatus.AVAILABLE;
+        console.log(`📊 Mapped status number ${statusValue} to ${statusStr}`);
       } else if (typeof statusValue === 'string') {
         // Direct string match
         statusStr = Object.values(CarStatus).includes(statusValue as CarStatus) 
@@ -113,7 +151,7 @@ export const CarsList = ({ cars }: CarsListProps) => {
           : CarStatus.AVAILABLE;
       } else if (statusValue && typeof statusValue === 'object') {
         // Try to extract numeric value from object properties
-        const numValue = statusValue?.value ?? statusValue?.name ?? statusValue?.variant;
+        const numValue = statusValue?.value ?? statusValue?.name ?? statusValue?.variant ?? statusValue?.tag;
         
         if (typeof numValue === 'number') {
           const statusMap: Record<number, CarStatus> = {
@@ -122,31 +160,50 @@ export const CarsList = ({ cars }: CarsListProps) => {
             2: CarStatus.MAINTENANCE,
           };
           statusStr = statusMap[numValue] || CarStatus.AVAILABLE;
+          console.log(`📊 Extracted number ${numValue} from object, mapped to ${statusStr}`);
         } else if (typeof numValue === 'string') {
           statusStr = Object.values(CarStatus).includes(numValue as CarStatus) 
             ? numValue 
             : CarStatus.AVAILABLE;
         } else {
-          // Last resort: try to parse the object
+          // Last resort: try to parse the object by stringifying
           const str = JSON.stringify(statusValue);
-          if (str.includes('"Available"') || str.includes('"0"')) {
+          if (str.includes('"Available"') || str.includes('"0"') || str.includes('Available')) {
             statusStr = CarStatus.AVAILABLE;
-          } else if (str.includes('"Rented"') || str.includes('"1"')) {
+          } else if (str.includes('"Rented"') || str.includes('"1"') || str.includes('Rented')) {
             statusStr = CarStatus.RENTED;
-          } else if (str.includes('"Maintenance"') || str.includes('"2"')) {
+          } else if (str.includes('"Maintenance"') || str.includes('"2"') || str.includes('Maintenance')) {
             statusStr = CarStatus.MAINTENANCE;
           } else {
-            statusStr = CarStatus.AVAILABLE;
-            console.warn("⚠️ Could not parse status object:", statusValue);
+            // If we still can't parse, but the object has a simulate method, 
+            // it might be the transaction object itself - try calling simulate again
+            if ('simulate' in statusValue && typeof statusValue.simulate === 'function') {
+              console.warn("⚠️ Status value is still a transaction object, this shouldn't happen");
+            }
+            // Default to checking if object looks like it might be Rented (most common after rental)
+            // But actually, let's be safe - find the car in state
+            const currentCar = cars.find(c => c.ownerAddress === owner);
+            statusStr = currentCar?.status || CarStatus.AVAILABLE;
+            console.warn("⚠️ Could not parse status object, using car.status from state:", statusStr);
           }
         }
       } else {
-        // Default to AVAILABLE if we can't determine
-        statusStr = CarStatus.AVAILABLE;
-        console.warn("⚠️ Could not determine status, defaulting to AVAILABLE");
+        // Default to AVAILABLE if we can't determine, but check car.status from state first
+        const currentCar = cars.find(c => c.ownerAddress === owner);
+        statusStr = currentCar?.status || CarStatus.AVAILABLE;
+        console.warn("⚠️ Could not determine status, defaulting to car.status from state:", statusStr);
       }
       
       status = statusStr as CarStatus;
+      
+      // If status parsing failed and we're preserving RENTED status, check current state
+      const currentCar = cars.find(c => c.ownerAddress === owner);
+      if (currentCar?.status === CarStatus.RENTED && status === CarStatus.AVAILABLE) {
+        // If car was RENTED in state but we got AVAILABLE, it might be a parsing error
+        // Keep RENTED status (the blockchain update might not be visible yet)
+        console.warn("⚠️ Status mismatch: state shows RENTED but contract returned AVAILABLE. Keeping RENTED status.");
+        status = CarStatus.RENTED;
+      }
       
       const [, availableToWithdraw] = Array.isArray(carInfo) ? carInfo : [0, 0];
       
@@ -154,6 +211,7 @@ export const CarsList = ({ cars }: CarsListProps) => {
         owner,
         status,
         availableToWithdraw: availableToWithdraw / ONE_XLM_IN_STROOPS,
+        previousStatus: currentCar?.status,
       });
       
       // Update car in state - ensure status is always a valid CarStatus string
@@ -311,7 +369,7 @@ export const CarsList = ({ cars }: CarsListProps) => {
       const txHash = await stellarService.submitTransaction(signedTx.signedTxXdr);
       console.log("✅ Transaction submitted successfully:", txHash);
 
-      // Update UI after successful transaction
+      // Update UI immediately after successful transaction
       setCars((prev) =>
         prev.map((c) =>
           c.ownerAddress === car.ownerAddress
@@ -320,9 +378,6 @@ export const CarsList = ({ cars }: CarsListProps) => {
         )
       );
       setHashId(txHash as string);
-      
-      // Reload car info to get updated available balance
-      await loadCarInfo(car.ownerAddress);
       
       alert(`✅ Auto alquilado exitosamente!\nHash: ${txHash}`);
     } catch (error) {
@@ -416,27 +471,26 @@ export const CarsList = ({ cars }: CarsListProps) => {
       );
     }
 
-    if (
-      selectedRole === UserRole.RENTER &&
-      car.status === CarStatus.AVAILABLE
-    ) {
-      // Disable rent button if user is trying to rent their own car
+    if (selectedRole === UserRole.RENTER) {
       const isOwner = walletAddress === car.ownerAddress;
       
-      return (
-        <button
-          onClick={() => void handleRent(car, walletAddress, 3)}
-          disabled={isOwner}
-          className={`px-3 py-1 rounded font-semibold transition-all ${
-            isOwner
-              ? "bg-gray-600/30 text-gray-500 cursor-not-allowed border border-gray-500/30"
-              : "bg-blue-600/80 text-white hover:bg-blue-600 hover:glow-blue cursor-pointer border border-blue-500/50 neon-text-blue"
-          }`}
-          title={isOwner ? "No puedes rentar tu propio auto" : "Rentar este auto"}
-        >
-          Rent
-        </button>
-      );
+      // Show "Rent" button only if car is available and not owned by renter
+      if (car.status === CarStatus.AVAILABLE && !isOwner) {
+        return (
+          <button
+            onClick={() => void handleRent(car, walletAddress, 3)}
+            disabled={isOwner}
+            className={`px-3 py-1 rounded font-semibold transition-all ${
+              isOwner
+                ? "bg-gray-600/30 text-gray-500 cursor-not-allowed border border-gray-500/30"
+                : "bg-blue-600/80 text-white hover:bg-blue-600 hover:glow-blue cursor-pointer border border-blue-500/50 neon-text-blue"
+            }`}
+            title={isOwner ? "No puedes rentar tu propio auto" : "Rentar este auto"}
+          >
+            Rent
+          </button>
+        );
+      }
     }
 
     return null;

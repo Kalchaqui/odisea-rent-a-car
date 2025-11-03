@@ -6,10 +6,10 @@ pub fn test_add_car_successfully() {
     let ContractTest { env, contract, .. } = ContractTest::setup();
 
     let owner = Address::generate(&env);
-    let price_per_day = 1500_i128;
+    let price_per_day: i128 = 1500_i128;
 
     env.mock_all_auths();
-    let commission_amount = 1_000_000_000_i128; // 1 XLM in stroops
+    let commission_amount: i128 = 1_000_000_000_i128; // 1 XLM in stroops
     contract.add_car(&owner, &price_per_day, &commission_amount);
     let contract_events = get_contract_events(&env, &contract.address);
 
@@ -41,24 +41,24 @@ pub fn test_add_car_successfully() {
 pub fn test_add_car_with_zero_price_fails() {
     let ContractTest { contract, env, .. } = ContractTest::setup();
     let owner = Address::generate(&env);
-    let price_per_day = 0_i128;
+    let price_per_day: i128 = 0_i128;
     
     env.mock_all_auths();
-    let commission_percentage = 10_u32;
+    let commission_amount: i128 = 1_000_000_000_i128; // 1 XLM in stroops
 
-    contract.add_car(&owner, &price_per_day, &commission_percentage);
+    contract.add_car(&owner, &price_per_day, &commission_amount);
 }
 #[test]
 #[should_panic(expected = "Error(Contract, #6)")]
 pub fn test_add_car_with_negative_price_fails() {
     let ContractTest { contract, env, .. } = ContractTest::setup();
     let owner = Address::generate(&env);
-    let price_per_day = -100_i128;
+    let price_per_day: i128 = -100_i128;
     
     env.mock_all_auths();
-    let commission_percentage = 10_u32;
+    let commission_amount: i128 = 1_000_000_000_i128; // 1 XLM in stroops
 
-    contract.add_car(&owner, &price_per_day, &commission_percentage);
+    contract.add_car(&owner, &price_per_day, &commission_amount);
 }
 
 #[test]
@@ -66,10 +66,10 @@ pub fn test_add_car_with_negative_price_fails() {
 pub fn test_add_car_already_exists_fails() {
     let ContractTest { contract, env, .. } = ContractTest::setup();
     let owner = Address::generate(&env);
-    let price_per_day = 1500_i128;
+    let price_per_day: i128 = 1500_i128;
     
     env.mock_all_auths();
-    let commission_amount = 1_000_000_000_i128;
+    let commission_amount: i128 = 1_000_000_000_i128;
 
     contract.add_car(&owner, &price_per_day, &commission_amount);
     contract.add_car(&owner, &price_per_day, &commission_amount);
@@ -82,18 +82,18 @@ pub fn test_unauthorized_user_cannot_add_car() {
 
     let fake_admin = Address::generate(&env);
     let owner = Address::generate(&env);
-    let price_per_day = 1500_i128;
+    let price_per_day: i128 = 1500_i128;
 
     env.mock_auths(&[MockAuth {
         address: &fake_admin,
         invoke: &MockAuthInvoke {
             contract: &contract.address,
             fn_name: "add_car",
-            args: (owner.clone(), price_per_day, 1_000_000_000_i128).into_val(&env),
+            args: (owner.clone(), price_per_day, 1_000_000_000_i128 as i128).into_val(&env),
             sub_invokes: &[],
         },
     }]);
 
-    let commission_amount = 1_000_000_000_i128;
+    let commission_amount: i128 = 1_000_000_000_i128;
     contract.add_car(&owner, &price_per_day, &commission_amount);
 }
